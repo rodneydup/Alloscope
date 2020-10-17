@@ -12,6 +12,7 @@ using namespace al;
 struct Alloscope : public App {
   unsigned int BufferSize = 32768;
   bool drawGUI = false;
+  float left = 0.0f, right = 0.0f;
 
   Parameter freq1{"Base Frequency", 2.0f, 0.1f, 500.0f};  // parameter for setting oscillator 1
   Parameter ratio{"Ratio", 1.5f, 1.0f, 10.0f};  // parameter for setting osc 2 relative to osc 1
@@ -20,6 +21,7 @@ struct Alloscope : public App {
   ParameterInt tailLength{"Tail Length", "", 2048, "", 1024, 8192};
   Parameter thickness{"Thickness", 0.8f, 0.05f, 1.5f};
   Parameter scale{"scale", 0.9f, 0.01f, 1.0f};
+  ParameterBool swapXY{"Swap X/Y"};
 
   ParameterMenu source{"Sound Source", "", 0,
                        ""};  // parameter for switching between internal/external sound source
@@ -138,6 +140,7 @@ struct Alloscope : public App {
       ParameterGUI::drawParameterColor(&color);
       ParameterGUI::drawParameter(&thickness);
       ParameterGUI::drawParameter(&scale);
+      ParameterGUI::drawParameterBool(&swapXY);
       ImGui::Separator();
       ImGui::Separator();
       ImGui::Text("Press g to show/hide gui");
@@ -153,15 +156,25 @@ struct Alloscope : public App {
   void onSound(AudioIOData &io) override {  // Audio callback
     while (io()) {
       if (source == 0) {  // if source is external (audio from another program or mic)
-        float left = io.in(0);
-        float right = io.in(1);
+        if (swapXY) {
+          left = io.in(1);
+          right = io.in(0);
+        } else {
+          left = io.in(0);
+          right = io.in(1);
+        }
         io.out(0) = left * outputVolume;
         io.out(1) = right * outputVolume;
         BufferX.push_back(left * scale);
         BufferY.push_back(right * scale);
       } else {  // if source is internal (using oscillators generated in this program)
-        float left = oscillatorL();
-        float right = oscillatorR();
+        if (swapXY) {
+          left = oscillatorR();
+          right = oscillatorL();
+        } else {
+          left = oscillatorL();
+          right = oscillatorR();
+        }
         io.out(0) = left * outputVolume;
         io.out(1) = right * outputVolume;
         BufferX.push_back(left * scale);
