@@ -19,7 +19,8 @@ struct Alloscope : public App {
   Parameter outputVolume{"Output Volume", 0.0f, 0.0f, 1.0f};
 
   ParameterInt tailLength{"Tail Length", "", 2048, "", 1024, 8192};
-  Parameter thickness{"Thickness", 0.8f, 0.05f, 1.5f};
+  Parameter thicknessSlider{"Thickness", 0.7f, 0.0f, 1.0f};
+  float thickness = (thicknessSlider * 1.5f) + 0.05;
   Parameter scale{"scale", 0.9f, 0.01f, 1.0f};
   ParameterBool swapXY{"Swap X/Y"};
 
@@ -43,6 +44,7 @@ struct Alloscope : public App {
 
   void onInit() override {  // Called on app start
     std::cout << "onInit()" << std::endl;
+    thicknessSlider.registerChangeCallback([&](float value) { thickness = (value * 1.5) + 0.05; });
   }
 
   void onCreate() override {  // Called when graphics context is available
@@ -138,7 +140,7 @@ struct Alloscope : public App {
       ImGui::Text("SCOPE");
       ParameterGUI::drawParameterInt(&tailLength, "");
       ParameterGUI::drawParameterColor(&color);
-      ParameterGUI::drawParameter(&thickness);
+      ParameterGUI::drawParameter(&thicknessSlider);
       ParameterGUI::drawParameter(&scale);
       ParameterGUI::drawParameterBool(&swapXY);
       ImGui::Separator();
@@ -193,7 +195,7 @@ struct Alloscope : public App {
 
       m >> val;
 
-      val = fmod(val, 1.0);
+      val = fmod(abs(val), 1.0);
       if (val < 0.2) {
         color = Color(1, val * 5, 0);
       } else if (val < 0.4) {
@@ -209,16 +211,16 @@ struct Alloscope : public App {
         val = (val - 0.8) * 5;
         color = Color(val, 0, 1);
       }
-    } else if (m.addressPattern() == "/thickness") {
+    } else if (m.addressPattern() == "/thicc") {
       // Extract the data out of the packet
       std::string str;
       float val;
 
       m >> val;
 
-      if (val > 1.5) val = 1.5;
-      if (val < 0.05) val = 0.05;
-      thickness = val;
+      if (val > 1.0) val = 1.0;
+      if (val < 0.0) val = 0.0;
+      thickness = (val * 1.5) + 0.5;
     }
   }
 
