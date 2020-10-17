@@ -173,16 +173,14 @@ struct Alloscope : public App {
   void onMessage(osc::Message &m) override {
     m.print();
     // Check that the address and tags match what we expect
-    if (m.addressPattern() == "/freq") {
+    if (m.addressPattern() == "/hue") {
       // Extract the data out of the packet
       std::string str;
       float val;
 
       m >> val;
 
-      // Print out the extracted packet data
-      std::cout << " got here: " << val << std::endl;
-      val = (val - 200) / 600;
+      val = fmod(val, 1.0);
       if (val < 0.2) {
         color = Color(1, val * 5, 0);
       } else if (val < 0.4) {
@@ -198,6 +196,16 @@ struct Alloscope : public App {
         val = (val - 0.8) * 5;
         color = Color(val, 0, 1);
       }
+    } else if (m.addressPattern() == "/thickness") {
+      // Extract the data out of the packet
+      std::string str;
+      float val;
+
+      m >> val;
+
+      if (val > 1.5) val = 1.5;
+      if (val < 0.05) val = 0.05;
+      thickness = val;
     }
   }
 
