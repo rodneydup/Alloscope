@@ -1,163 +1,19 @@
 // X/Y Oscilloscope app by Rodney DuPlessis
-// To Do:
-// Fix glitch where inaccurate lines flash on screen
-//
 
 #include "Gamma/Oscillator.h"
 #include "al/app/al_App.hpp"
 #include "al/types/al_SingleRWRingBuffer.hpp"
 #include "al/ui/al_ParameterGUI.hpp"
-
-// custom ringbuffer class for storing scope values (needed to draw the trail)
-class RingBuffer {
- public:
-  RingBuffer(unsigned maxSize) : mMaxSize(maxSize) {
-    mBuffer.resize(mMaxSize);
-    mTail = -1;
-    mPrevSample = 0;
-  }
-
-  unsigned getMaxSize() const { return mMaxSize; }
-
-  void resize(unsigned maxSize) {
-    mMaxSize = maxSize;
-    mBuffer.resize(mMaxSize);
-  }
-
-  void push_back(float value) {
-    mTail = (mTail + 1) % mMaxSize;
-    mBuffer[mTail] = value;
-  }
-
-  unsigned getTail() const { return mTail; }
-
-  float at(unsigned index) {
-    if (index >= mMaxSize) {
-      std::cerr << "RingBuffer index out of range." << std::endl;
-      index = index % mMaxSize;
-    }
-    mPrevSample = mBuffer.at(index);
-    return mPrevSample;
-  }
-
-  float operator[](unsigned index) { return this->at(index); }
-
-  std::vector<float> getArray(unsigned lookBack) {
-    std::vector<float> array(lookBack, 0);
-    int start = mTail - lookBack;
-    if (start < 0) start = mMaxSize + start;
-    for (unsigned i = 0; i < lookBack; i++) array[i] = mBuffer[(start + i) % mMaxSize];
-    return array;
-  }
-
- private:
-  std::vector<float> mBuffer;
-  unsigned mMaxSize;
-  int mTail;
-  float mPrevSample;
-};
-
-// the following is the shader code, which allows for the fuzzy look
-const char *vertexCode = R"(
-#version 400
-
-layout(location = 0) in vec3 vertexPosition;
-layout(location = 1) in vec4 vertexColor;
-layout(location = 2) in vec2
-    vertexThickness;  // as a 2D texture cordinate, but we ignore the y
-
-out Vertex {
-  vec4 color;
-  float size;
-}
-vertex;
-
-void main() {
-  gl_Position = vec4(vertexPosition, 1.0);
-  vertex.color = vertexColor;
-  vertex.size = vertexThickness.x;
-}
-)";
-
-const char *geometryCode = R"(
-#version 400
-
-// take in a point and output a triangle strip with 4 vertices (aka a "quad")
-//
-layout(lines) in;
-layout(triangle_strip, max_vertices = 4) out;
-
-in Vertex {
-  vec4 color;
-  float size;
-}
-vertex[];
-
-out Fragment {
-  vec4 color;
-  float textureCoordinate;
-}
-fragment;
-
-void main() {
-  vec4 a = gl_in[0].gl_Position;
-  vec4 b = gl_in[1].gl_Position;
-
-  const float r = 0.03;
-
-  vec4 d = vec4(normalize(cross(b.xyz - a.xyz, vec3(0.0, 0.0, 1.0))), 0.0) * r;
-
-  gl_Position = a + d * vertex[0].size;
-  fragment.color = vertex[0].color;
-  fragment.textureCoordinate = 0.0;
-  EmitVertex();
-
-  gl_Position = a - d * vertex[0].size;
-  fragment.color = vertex[0].color;
-  fragment.textureCoordinate = 1.0;
-  EmitVertex();
-
-  gl_Position = b + d * vertex[1].size;
-  fragment.color = vertex[1].color;
-  fragment.textureCoordinate = 0.0;
-  EmitVertex();
-
-  gl_Position = b - d * vertex[1].size;
-  fragment.color = vertex[1].color;
-  fragment.textureCoordinate = 1.0;
-  EmitVertex();
-
-  EndPrimitive();
-}
-)";
-
-const char *fragmentCode = R"(
-#version 400
-
-in Fragment {
-  vec4 color;
-  float textureCoordinate;
-}
-fragment;
-
-uniform sampler1D alphaTexture;
-
-layout(location = 0) out vec4 fragmentColor;
-
-void main() {
-  float a = texture(alphaTexture, fragment.textureCoordinate).r;
-  if (a < 0.05) discard;
-  fragmentColor = vec4(fragment.color.xyz, fragment.color.a * a);
-}
-)";
+#include "shadercode.hpp"
+#include "utility.hpp"
 
 using namespace al;
 
-struct MyApp : public App {
+struct Alloscope : public App {
   unsigned int BufferSize = 32768;
   bool drawGUI = false;
 
-  Parameter freq1{"Frequency 1", 2.0f, 0.1f, 500.0f};  // parameter for setting oscillator 1
+  Parameter freq1{"Base Frequency", 2.0f, 0.1f, 500.0f};  // parameter for setting oscillator 1
   Parameter ratio{"Ratio", 1.5f, 1.0f, 10.0f};  // parameter for setting osc 2 relative to osc 1
   Parameter outputVolume{"Output Volume", 0.0f, 0.0f, 1.0f};
 
@@ -202,7 +58,7 @@ struct MyApp : public App {
 
     source.setElements({"External", "Internal"});
 
-    lineShader.compile(vertexCode, fragmentCode, geometryCode);
+    lineShader.compile(shader::vertexCode, shader::fragmentCode, shader::geometryCode);
     // trail.filter(Texture::LINEAR);
 
     pointTexture.create2D(256, 256, Texture::R8, Texture::RED, Texture::SHORT);
@@ -362,8 +218,8 @@ struct MyApp : public App {
 };
 
 int main() {
-  MyApp app;
-  app.title("Oscilloscope");
+  Alloscope app;
+  app.title("Alloscope");
 
   // for (int i = 0; i < AudioDevice::numDevices(); i++) {
   //   printf(" --- [%2d] ", i);
@@ -374,8 +230,7 @@ int main() {
   // }
 
   // find soundflower exact name and make that default audio device
-
-  app.configureAudio(48000, 512, 2, 2);
+  app.configureAudio(48000, 1024, 2, 2);
   app.start();
   return 0;
 }
