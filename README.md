@@ -8,6 +8,8 @@ Alloscope accepts OSC control to modulate the parameters of color and thickness.
 
 The app was built using the Allolib framework (https://github.com/AlloSphere-Research-Group/allolib).
 
+![](alloscope_screenshot.png "this is what Alloscope looks like")
+
 ## Usage
 
 After launching the app, press 'g' on your keyboard to open the GUI control panel. Here you can cusomtize everything from the look of the scope to the audio settings. Press 'g' again to hide the gui.
