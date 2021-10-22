@@ -244,16 +244,18 @@ int main() {
   Alloscope app;
   app.title("Alloscope");
 
-  // for (int i = 0; i < AudioDevice::numDevices(); i++) {
-  //   printf(" --- [%2d] ", i);
-  //   AudioDevice dev(i);
-  //   std::string s1 = dev.name();
-  //   std::string s2 = "Soundflower";
-  //   AudioDevice thing = dev(i);
-  // }
-
   // find soundflower exact name and make that default audio device
-  app.configureAudio(48000, 1024, 2, 2);
+  int x = 0;
+  std::string s2 = "Soundflower (2ch)";
+  for (int i = 0; i < AudioDevice::numDevices(); i++) {
+    AudioDevice dev(i);
+    std::string s1 = dev.name();
+    if (s1.find(s2) != std::string::npos)
+      x = i;
+  }
+  AudioDevice dev(x)
+
+  app.configureAudio(dev, 44100, 512, 2, 2);
   app.start();
   return 0;
 }
