@@ -253,7 +253,7 @@ int main() {
     if (s1.find(s2) != std::string::npos)
       x = i;
   }
-  AudioDevice dev(x)
+  AudioDevice dev(x);
 
   app.configureAudio(dev, 44100, 512, 2, 2);
   app.start();
